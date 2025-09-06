@@ -1,0 +1,346 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+
+// -----------------------------
+// Tipos (TypeScript)
+// -----------------------------
+
+type ExchangeInfo = {
+  symbols: Array<{
+    symbol: string;
+    status: string;
+  }>;
+};
+
+type Ticker24hr = {
+  s: string; // Symbol
+  c: string; // Last price
+  b: string; // Best bid price
+  a: string; // Best ask price
+  P: string; // Price change percent
+};
+
+type CombinedStreamMessage = {
+  stream: string;
+  data: Ticker24hr;
+};
+
+// -----------------------------
+// Contexto de Estado Global
+// -----------------------------
+
+type AppState = {
+  allSymbols: string[];
+  loadingSymbols: boolean;
+  watchlist: string[];
+  addToWatchlist: (sym: string) => void;
+  removeFromWatchlist: (sym: string) => void;
+  sortBy: string;
+  setSortBy: (v: string) => void;
+  decimals: number;
+  setDecimals: (n: number) => void;
+};
+
+const AppCtx = createContext<AppState | null>(null);
+
+const STORAGE_KEY = "binance_watchlist";
+
+const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [allSymbols, setAllSymbols] = useState<string[]>([]);
+  const [loadingSymbols, setLoadingSymbols] = useState(false);
+  const [watchlist, setWatchlist] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [sortBy, setSortBy] = useState<string>("symbol");
+  const [decimals, setDecimals] = useState<number>(4);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoadingSymbols(true);
+      try {
+        const res = await fetch("https://api.binance.com/api/v3/exchangeInfo");
+        const json: ExchangeInfo = await res.json();
+        const tradables = (json.symbols || [])
+          .filter((s) => s.status === "TRADING")
+          .map((s) => s.symbol.toUpperCase());
+        const uniqueSorted = Array.from(new Set(tradables)).sort();
+        setAllSymbols(uniqueSorted);
+      } catch (e) {
+        console.error("Erro ao buscar exchangeInfo", e);
+      } finally {
+        setLoadingSymbols(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(watchlist));
+    } catch {}
+  }, [watchlist]);
+
+  const addToWatchlist = useCallback((sym: string) => {
+    setWatchlist((prev) => (prev.includes(sym) ? prev : [...prev, sym]));
+  }, []);
+
+  const removeFromWatchlist = useCallback((sym: string) => {
+    setWatchlist((prev) => prev.filter((s) => s !== sym));
+  }, []);
+
+  const value: AppState = {
+    allSymbols,
+    loadingSymbols,
+    watchlist,
+    addToWatchlist,
+    removeFromWatchlist,
+    sortBy,
+    setSortBy,
+    decimals,
+    setDecimals,
+  };
+
+  return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
+};
+
+const useApp = () => {
+  const ctx = useContext(AppCtx);
+  if (!ctx) throw new Error("useApp deve ser usado dentro de <AppProvider>");
+  return ctx;
+};
+
+// -----------------------------
+// Hook para WebSocket de preços
+// -----------------------------
+
+function useBinanceTicker(watchlist: string[]) {
+  const [tickers, setTickers] = useState<Record<string, Ticker24hr>>({});
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    if (watchlist.length === 0) {
+      setTickers({});
+      return;
+    }
+
+    const streamParam = watchlist
+      .map((s) => `${s.toLowerCase()}@ticker`)
+      .join("/");
+
+    const url = `wss://data-stream.binance.com/stream?streams=${streamParam}`;
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg: CombinedStreamMessage = JSON.parse(ev.data);
+        const d = msg.data;
+        if (!d || !d.s) return;
+        setTickers((prev) => ({ ...prev, [d.s.toUpperCase()]: d }));
+      } catch (e) {
+        console.error("Falha ao parsear WS", e);
+      }
+    };
+
+    ws.onerror = () => {
+      console.error("Erro no WebSocket");
+    };
+
+    return () => ws.close();
+  }, [watchlist.join("|")]);
+
+  return { tickers };
+}
+
+// -----------------------------
+// UI Components
+// -----------------------------
+
+const Badge: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => (
+  <span title={title} className="inline-block rounded-2xl border px-2 py-0.5 text-xs">
+    {children}
+  </span>
+);
+
+const NumberCell: React.FC<{ value?: string; fallback?: string; align?: "left" | "right" }>
+  = ({ value, fallback = "—", align = "right" }) => {
+  const { decimals } = useApp();
+  const num = value ? Number(value) : NaN;
+  const cls = isNaN(num) ? "" : num > 0 ? "text-green-600" : num < 0 ? "text-red-600" : "";
+  const formatted = isNaN(num) ? fallback : num.toFixed(decimals);
+  return (
+    <div className={`tabular-nums ${align === "right" ? "text-right" : "text-left"} ${cls}`}>
+      {formatted}
+    </div>
+  );
+};
+
+const Header: React.FC = () => (
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 className="text-2xl font-bold">Binance Tickers (24h)</h1>
+      <p className="text-sm opacity-70">Selecione símbolos e acompanhe preço, bid/ask e variação.</p>
+    </div>
+  </div>
+);
+
+const SymbolPicker: React.FC = () => {
+  const { allSymbols, loadingSymbols, watchlist, addToWatchlist, removeFromWatchlist } = useApp();
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    if (!q) return allSymbols.slice(0, 200);
+    return allSymbols.filter((s) => s.includes(q)).slice(0, 200);
+  }, [allSymbols, query]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <label className="text-xs uppercase opacity-70">Buscar símbolo</label>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ex.: BTCUSDT"
+          className="mt-1 w-full rounded-2xl border p-2 outline-none focus:ring"
+          aria-label="Buscar símbolo"
+        />
+      </div>
+      <div className="rounded-2xl border p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium">Símbolos</span>
+          <Badge title="Total disponíveis na API">{allSymbols.length} no total</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {loadingSymbols && <div>Carregando…</div>}
+          {!loadingSymbols && filtered.map((s) => {
+            const active = watchlist.includes(s);
+            return (
+              <button
+                key={s}
+                onClick={() => (active ? removeFromWatchlist(s) : addToWatchlist(s))}
+                className={`rounded-2xl border px-3 py-2 text-sm transition hover:shadow ${
+                  active ? "bg-black text-white" : "bg-white"
+                }`}
+                title={active ? "Remover da Watchlist" : "Adicionar à Watchlist"}
+                aria-pressed={active}
+              >
+                {s}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WatchTable: React.FC = () => {
+  const { watchlist, removeFromWatchlist, sortBy, setSortBy } = useApp();
+  const { tickers } = useBinanceTicker(watchlist);
+
+  const rows = useMemo(() => {
+    let data = watchlist.map((s) => ({ symbol: s, data: tickers[s] }));
+    if (sortBy === "symbol") data = data.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    if (sortBy === "price") data = data.sort((a, b) => Number(b.data?.c || 0) - Number(a.data?.c || 0));
+    if (sortBy === "change") data = data.sort((a, b) => Number(b.data?.P || 0) - Number(a.data?.P || 0));
+    return data;
+  }, [watchlist, tickers, sortBy]);
+
+  return (
+    <div className="rounded-2xl border overflow-hidden">
+      <div className="flex items-center justify-between border-b p-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Watchlist</h2>
+          <Badge>{watchlist.length} símbolos</Badge>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span>Ordenar por:</span>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Ordenar por">
+            <option value="symbol">Símbolo</option>
+            <option value="price">Preço</option>
+            <option value="change">Variação %</option>
+          </select>
+        </div>
+      </div>
+      <div className="overflow-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left">
+              <th className="p-3">Símbolo</th>
+              <th className="p-3 text-right">Último</th>
+              <th className="p-3 text-right">Bid</th>
+              <th className="p-3 text-right">Ask</th>
+              <th className="p-3 text-right">Var %</th>
+              <th className="p-3">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-6 text-center opacity-70">
+                  Adicione símbolos acima para começar a acompanhar.
+                </td>
+              </tr>
+            )}
+            {rows.map(({ symbol, data }) => (
+              <tr key={symbol} className="border-t">
+                <td className="p-3 font-mono">{symbol}</td>
+                <td className="p-3"><NumberCell value={data?.c} /></td>
+                <td className="p-3"><NumberCell value={data?.b} /></td>
+                <td className="p-3"><NumberCell value={data?.a} /></td>
+                <td className="p-3"><NumberCell value={data?.P} /></td>
+                <td className="p-3">
+                  <button
+                    onClick={() => removeFromWatchlist(symbol)}
+                    className="rounded-xl border px-2 py-1 text-xs hover:bg-slate-50"
+                    aria-label={`Remover ${symbol} da watchlist`}
+                  >
+                    Remover
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// -----------------------------
+// App
+// -----------------------------
+
+export default function App() {
+  return (
+    <AppProvider>
+      <main className="mx-auto grid max-w-7xl gap-6 p-4 md:p-8">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <Header />
+        </motion.div>
+
+        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-3">
+            <SymbolPicker />
+          </div>
+        </motion.section>
+
+        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          <WatchTable />
+        </motion.section>
+      </main>
+    </AppProvider>
+  );
+}

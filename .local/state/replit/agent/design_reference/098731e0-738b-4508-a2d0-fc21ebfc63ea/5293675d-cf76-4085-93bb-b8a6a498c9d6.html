@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance Trading Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                    success: "var(--success)",
+                    error: "var(--error)",
+                },
+                fontFamily: {
+                    sans: ["var(--font-sans)"],
+                }
+            },
+        }
+    };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222.2 84% 4.9%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222.2 84% 4.9%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222.2 84% 4.9%);
+            --primary: hsl(210 100% 50%);
+            --primary-foreground: hsl(210 40% 98%);
+            --secondary: hsl(210 40% 96%);
+            --secondary-foreground: hsl(222.2 84% 4.9%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215.4 16.3% 46.9%);
+            --accent: hsl(210 40% 96%);
+            --accent-foreground: hsl(222.2 84% 4.9%);
+            --destructive: hsl(0 84.2% 60.2%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(214.3 31.8% 91.4%);
+            --input: hsl(214.3 31.8% 91.4%);
+            --ring: hsl(210 100% 50%);
+            --success: hsl(142.1 76.2% 36.3%);
+            --error: hsl(0 84.2% 60.2%);
+            --radius: 0.75rem;
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .dark {
+            --background: hsl(222.2 84% 4.9%);
+            --foreground: hsl(210 40% 98%);
+            --card: hsl(222.2 84% 4.9%);
+            --card-foreground: hsl(210 40% 98%);
+            --popover: hsl(222.2 84% 4.9%);
+            --popover-foreground: hsl(210 40% 98%);
+            --primary: hsl(210 100% 50%);
+            --primary-foreground: hsl(222.2 84% 4.9%);
+            --secondary: hsl(217.2 32.6% 17.5%);
+            --secondary-foreground: hsl(210 40% 98%);
+            --muted: hsl(217.2 32.6% 17.5%);
+            --muted-foreground: hsl(215 20.2% 65.1%);
+            --accent: hsl(217.2 32.6% 17.5%);
+            --accent-foreground: hsl(210 40% 98%);
+            --destructive: hsl(0 62.8% 30.6%);
+            --destructive-foreground: hsl(210 40% 98%);
+            --border: hsl(217.2 32.6% 17.5%);
+            --input: hsl(217.2 32.6% 17.5%);
+            --ring: hsl(210 100% 50%);
+            --success: hsl(142.1 70.6% 45.3%);
+            --error: hsl(0 62.8% 30.6%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.5;
+        }
+
+        .animate-pulse-data {
+            animation: pulse-data 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-data {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .connection-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .connection-dot.connected {
+            background: hsl(var(--success));
+        }
+
+        .connection-dot.disconnected {
+            background: hsl(var(--error));
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .symbol-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px hsl(var(--primary) / 0.15);
+        }
+
+        .symbol-button.active {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            box-shadow: 0 2px 8px hsl(var(--primary) / 0.25);
+        }
+
+        .price-positive {
+            color: hsl(var(--success));
+        }
+
+        .price-negative {
+            color: hsl(var(--error));
+        }
+
+        .price-neutral {
+            color: hsl(var(--muted-foreground));
+        }
+
+        .data-row:hover {
+            background: hsl(var(--muted) / 0.5);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- @COMPONENT: AppProvider [Global state management] -->
+    <div class="min-h-screen bg-background">
+        <!-- @COMPONENT: Header [Main navigation and branding] -->
+        <header class="border-b border-border bg-card shadow-sm">
+            <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                <i class="fas fa-chart-line text-lg"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-foreground">Binance Dashboard</h1>
+                                <p class="text-sm text-muted-foreground">Real-time cryptocurrency tracking</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <!-- @COMPONENT: ConnectionStatus [WebSocket connection indicator] -->
+                        <div class="connection-indicator text-sm text-muted-foreground">
+                            <div class="connection-dot connected" data-mock="true"></div>
+                            <span data-bind="connectionStatus">Connected</span>
+                        </div>
+                        <a
+                            href="https://github.com/fontiana/frontend-test"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        >
+                            <i class="fab fa-github"></i>
+                            View on GitHub
+                            <i class="fas fa-external-link-alt text-xs"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <!-- @COMPONENT: SymbolPicker [Search and symbol selection] -->
+            <section class="mb-8">
+                <div class="rounded-lg border border-border bg-card p-6 shadow-sm">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-card-foreground">Symbol Search</h2>
+                        <p class="text-sm text-muted-foreground">Search and select trading pairs to add to your watchlist</p>
+                    </div>
+
+                    <!-- @COMPONENT: SearchInput [Symbol search functionality] -->
+                    <div class="mb-6">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fas fa-search text-muted-foreground"></i>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search symbols (e.g., BTCUSDT, ETHUSDT)..."
+                                class="search-input w-full rounded-md border border-input bg-background pl-10 pr-4 py-2 text-sm text-foreground transition-colors"
+                                data-mock="true"
+                                data-event="input:handleSearch"
+                                data-implementation="Should filter symbols in real-time"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- @COMPONENT: SymbolStats [Display symbol statistics] -->
+                    <div class="mb-4 flex flex-wrap items-center gap-4">
+                        <div class="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                            <i class="fas fa-database"></i>
+                            <span data-bind="totalSymbols">2,847</span> total symbols
+                        </div>
+                        <div class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
+                            <i class="fas fa-eye"></i>
+                            <span data-bind="watchlistCount">5</span> in watchlist
+                        </div>
+                        <div class="text-xs text-muted-foreground">
+                            Showing top 200 results for performance
+                        </div>
+                    </div>
+
+                    <!-- @COMPONENT: SymbolGrid [Grid of available symbols] -->
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+                        <!-- @MAP: filteredSymbols.slice(0, 200).map(symbol => ( -->
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            BTCUSDT
+                        </button>
+                        <button class="symbol-button active rounded-md border border-border px-3 py-2 text-sm font-medium transition-all" data-mock="true">
+                            ETHUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            BNBUSDT
+                        </button>
+                        <button class="symbol-button active rounded-md border border-border px-3 py-2 text-sm font-medium transition-all" data-mock="true">
+                            ADAUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            SOLUSDT
+                        </button>
+                        <button class="symbol-button active rounded-md border border-border px-3 py-2 text-sm font-medium transition-all" data-mock="true">
+                            XRPUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            DOTUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            AVAXUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            MATICUSDT
+                        </button>
+                        <button class="symbol-button active rounded-md border border-border px-3 py-2 text-sm font-medium transition-all" data-mock="true">
+                            LINKUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            LTCUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            UNIUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            ATOMUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            ALGOUSDT
+                        </button>
+                        <button class="symbol-button rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-all hover:bg-accent hover:text-accent-foreground" data-mock="true">
+                            VETUSDT
+                        </button>
+                        <button class="symbol-button active rounded-md border border-border px-3 py-2 text-sm font-medium transition-all" data-mock="true">
+                            ICPUSDT
+                        </button>
+                        <!-- @END_MAP )) -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- @COMPONENT: WatchlistTable [Real-time trading data display] -->
+            <section>
+                <div class="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
+                    <div class="border-b border-border bg-muted/50 px-6 py-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-lg font-semibold text-card-foreground">Watchlist</h2>
+                                <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                    <i class="fas fa-star"></i>
+                                    <span data-bind="watchlistCount">5</span> symbols
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                                <div class="connection-dot connected"></div>
+                                Real-time via WebSocket
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- @COMPONENT: TradingDataTable [Scrollable table with trading information] -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-border bg-muted/30">
+                                    <th class="px-6 py-3 text-left font-medium text-muted-foreground">Symbol</th>
+                                    <th class="px-6 py-3 text-right font-medium text-muted-foreground">Last Price</th>
+                                    <th class="px-6 py-3 text-right font-medium text-muted-foreground">24h Change</th>
+                                    <th class="px-6 py-3 text-right font-medium text-muted-foreground">Bid Price</th>
+                                    <th class="px-6 py-3 text-right font-medium text-muted-foreground">Ask Price</th>
+                                    <th class="px-6 py-3 text-right font-medium text-muted-foreground">Volume (24h)</th>
+                                    <th class="px-6 py-3 text-center font-medium text-muted-foreground">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- @MAP: watchlistSymbols.map(symbol => ( -->
+                                <tr class="data-row border-b border-border transition-colors" data-mock="true">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                <i class="fab fa-bitcoin text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-mono font-medium text-card-foreground" data-bind="symbol">BTCUSDT</div>
+                                                <div class="text-xs text-muted-foreground">Bitcoin/USDT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums font-medium text-card-foreground" data-bind="lastPrice">$43,287.50</div>
+                                        <div class="text-xs text-muted-foreground">Updated 1s ago</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-sm font-medium text-green-700">
+                                            <i class="fas fa-arrow-up text-xs"></i>
+                                            <span class="tabular-nums" data-bind="change24h">+2.34%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="bidPrice">$43,285.20</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="askPrice">$43,289.80</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="volume24h">28,459.67</div>
+                                        <div class="text-xs text-muted-foreground">BTC</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button class="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground" data-event="click:removeFromWatchlist">
+                                            <i class="fas fa-times"></i>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="data-row border-b border-border transition-colors" data-mock="true">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 text-secondary-foreground">
+                                                <i class="fab fa-ethereum text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-mono font-medium text-card-foreground" data-bind="symbol">ETHUSDT</div>
+                                                <div class="text-xs text-muted-foreground">Ethereum/USDT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums font-medium text-card-foreground" data-bind="lastPrice">$2,687.42</div>
+                                        <div class="text-xs text-muted-foreground">Updated 2s ago</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700">
+                                            <i class="fas fa-arrow-down text-xs"></i>
+                                            <span class="tabular-nums" data-bind="change24h">-1.78%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="bidPrice">$2,686.91</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="askPrice">$2,687.93</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="volume24h">142,847.89</div>
+                                        <div class="text-xs text-muted-foreground">ETH</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button class="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground" data-event="click:removeFromWatchlist">
+                                            <i class="fas fa-times"></i>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="data-row border-b border-border transition-colors" data-mock="true">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                                                <i class="fas fa-coins text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-mono font-medium text-card-foreground" data-bind="symbol">ADAUSDT</div>
+                                                <div class="text-xs text-muted-foreground">Cardano/USDT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums font-medium text-card-foreground" data-bind="lastPrice">$0.4825</div>
+                                        <div class="text-xs text-muted-foreground">Updated just now</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-sm font-medium text-green-700">
+                                            <i class="fas fa-arrow-up text-xs"></i>
+                                            <span class="tabular-nums" data-bind="change24h">+5.67%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="bidPrice">$0.4823</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="askPrice">$0.4827</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="volume24h">89,234,567</div>
+                                        <div class="text-xs text-muted-foreground">ADA</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button class="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground" data-event="click:removeFromWatchlist">
+                                            <i class="fas fa-times"></i>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="data-row border-b border-border transition-colors" data-mock="true">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                                <i class="fas fa-link text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-mono font-medium text-card-foreground" data-bind="symbol">LINKUSDT</div>
+                                                <div class="text-xs text-muted-foreground">Chainlink/USDT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums font-medium text-card-foreground" data-bind="lastPrice">$14.67</div>
+                                        <div class="text-xs text-muted-foreground">Updated 3s ago</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-700">
+                                            <i class="fas fa-minus text-xs"></i>
+                                            <span class="tabular-nums" data-bind="change24h">0.00%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="bidPrice">$14.66</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="askPrice">$14.68</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="volume24h">1,234,567</div>
+                                        <div class="text-xs text-muted-foreground">LINK</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button class="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground" data-event="click:removeFromWatchlist">
+                                            <i class="fas fa-times"></i>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <tr class="data-row transition-colors" data-mock="true">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+                                                <i class="fas fa-coins text-xs"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-mono font-medium text-card-foreground" data-bind="symbol">ICPUSDT</div>
+                                                <div class="text-xs text-muted-foreground">Internet Computer/USDT</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums font-medium text-card-foreground" data-bind="lastPrice">$5.23</div>
+                                        <div class="text-xs text-muted-foreground">Updated 1s ago</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700">
+                                            <i class="fas fa-arrow-down text-xs"></i>
+                                            <span class="tabular-nums" data-bind="change24h">-3.21%</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="bidPrice">$5.22</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="askPrice">$5.24</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="tabular-nums text-card-foreground" data-bind="volume24h">2,456,789</div>
+                                        <div class="text-xs text-muted-foreground">ICP</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button class="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground" data-event="click:removeFromWatchlist">
+                                            <i class="fas fa-times"></i>
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                                <!-- @END_MAP )) -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- @COMPONENT: EmptyState [Shown when watchlist is empty] -->
+                    <div class="hidden px-6 py-12 text-center" data-state="empty-watchlist">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                            <i class="fas fa-star text-lg text-muted-foreground"></i>
+                        </div>
+                        <h3 class="mt-4 text-sm font-medium text-card-foreground">No symbols in watchlist</h3>
+                        <p class="mt-2 text-sm text-muted-foreground">
+                            Add symbols from the search above to start tracking real-time prices
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- @COMPONENT: Footer [Technical information and links] -->
+        <footer class="mt-12 border-t border-border bg-muted/30 px-4 py-8">
+            <div class="mx-auto max-w-7xl">
+                <div class="grid gap-8 md:grid-cols-2">
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground">Technical Information</h3>
+                        <div class="mt-4 space-y-2 text-xs text-muted-foreground">
+                            <p>
+                                Real-time data powered by Binance WebSocket API using the 
+                                <code class="rounded bg-background px-1 py-0.5 font-mono">24hrTicker</code> stream
+                            </p>
+                            <p>
+                                WebSocket endpoint: <code class="rounded bg-background px-1 py-0.5 font-mono">wss://data-stream.binance.com/stream</code>
+                            </p>
+                            <p>
+                                Exchange info from: <code class="rounded bg-background px-1 py-0.5 font-mono">https://api.binance.com/api/v3/exchangeInfo</code>
+                            </p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground">Features</h3>
+                        <div class="mt-4 space-y-1 text-xs text-muted-foreground">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check text-green-600"></i>
+                                Real-time price updates via WebSocket
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check text-green-600"></i>
+                                Advanced symbol search and filtering
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check text-green-600"></i>
+                                Responsive design for all devices
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check text-green-600"></i>
+                                TypeScript integration ready
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 flex flex-col gap-4 border-t border-border pt-8 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-xs text-muted-foreground">
+                        Built with React, TypeScript, and Tailwind CSS
+                    </p>
+                    <div class="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>Data provided by Binance API</span>
+                        <span>•</span>
+                        <span>Not for production trading</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <!-- @END_COMPONENT: AppProvider -->
+
+    <script>
+        // TODO: Implement WebSocket connection management
+        // TODO: Implement symbol search functionality
+        // TODO: Implement watchlist state management
+        // TODO: Implement real-time price updates
+        // TODO: Implement responsive behavior optimizations
+
+        (function() {
+            // Demo interaction behavior
+            document.addEventListener('DOMContentLoaded', function() {
+                // Symbol button interactions
+                const symbolButtons = document.querySelectorAll('.symbol-button');
+                symbolButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        this.classList.toggle('active');
+                        // TODO: Add to/remove from watchlist
+                    });
+                });
+
+                // Search input placeholder behavior
+                const searchInput = document.querySelector('.search-input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        // TODO: Filter symbols based on input
+                        console.log('Searching for:', this.value);
+                    });
+                }
+
+                // Remove buttons
+                const removeButtons = document.querySelectorAll('[data-event*="removeFromWatchlist"]');
+                removeButtons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        // TODO: Remove symbol from watchlist
+                        const row = this.closest('tr');
+                        if (row) {
+                            row.style.opacity = '0.5';
+                            setTimeout(() => {
+                                row.remove();
+                            }, 300);
+                        }
+                    });
+                });
+
+                // Simulate real-time price updates
+                setInterval(() => {
+                    const priceElements = document.querySelectorAll('[data-bind*="Price"]');
+                    priceElements.forEach(element => {
+                        element.classList.add('animate-pulse-data');
+                        setTimeout(() => {
+                            element.classList.remove('animate-pulse-data');
+                        }, 1000);
+                    });
+                }, 3000);
+            });
+        })();
+    </script>
+</body>
+</html>
